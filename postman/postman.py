@@ -1,40 +1,50 @@
 #!/usr/bin/env python3
-from collections import namedtuple
+from functools import partial
 from itertools import permutations
+from typing import Tuple
+from typing import NamedTuple
 
 
-Point = namedtuple('Point', 'x y')
+class Point(NamedTuple):
+    x: float
+    y: float
 
 
-def get_distance(p1, p2):
+def get_distance(p1: Point, p2: Point) -> float:
     return ((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) ** 0.5
 
 
-def get_path_length(points, path):
-    full_path = [0, *path, 0]
+def get_path_length(points: list[Point], path: list[int]) -> float:
     total_length = 0
-    for p1, p2 in zip(full_path, full_path[1:]):
-        total_length += get_distance(points[p1], points[p2])
+    for i1, i2 in zip(path, path[1:]):
+        total_length += get_distance(points[i1], points[i2])
     return total_length
 
 
-def format_result(points, path, path_length):
-    full_path = [0, *path, 0]
-    s = f'({points[0].x}, {points[0].y})'
+def format_result(points: list[Point], path: list[int]) -> str:
+    """This function duplicates some of the `get_path_length` functionality to avoid creating
+    too many unused objects - it's faster to calculate the running sum of the distances again."""
     total_length = 0
-    for p1, p2 in zip(full_path, full_path[1:]):
-        total_length += get_distance(points[p1], points[p2])
-        s += f' -> ({points[p2].x}, {points[p2].y})[{total_length}]'
-    s += f' = {path_length}'
-    return s
+    result = f"({points[0].x}, {points[0].y})"
+    for i1, i2 in zip(path, path[1:]):
+        total_length += get_distance(points[i1], points[i2])
+        result += f" -> ({points[i2].x}, {points[i2].y})[{total_length}]"
+    result += f" = {total_length}"
+    return result
 
 
-if __name__ == '__main__':
+def get_unique_paths(points: list[Point]) -> list[Tuple]:
+    """Since the permutations contain unique integers, we can filter them out by discarding
+    the reversed ones via comparing the first and the last element of each permutation."""
+    return [
+        (0, *perm, 0)
+        for perm in permutations(range(1, len(points)))
+        if perm[0] <= perm[-1]
+    ]
+
+
+if __name__ == "__main__":
     points = (Point(0, 2), Point(2, 5), Point(5, 2), Point(6, 6), Point(8, 3))
+    min_path = min(get_unique_paths(points), key=partial(get_path_length, points))
 
-    paths = [p for p in permutations(range(1, 5)) if p[0] <= p[-1]]
-    paths_lengths = [get_path_length(points, path) for path in paths]
-    min_path_length = min(paths_lengths)
-    min_path_index = paths_lengths.index(min_path_length)
-    min_path = paths[min_path_index]
-    print(format_result(points, min_path, min_path_length))
+    print(format_result(points, min_path))
